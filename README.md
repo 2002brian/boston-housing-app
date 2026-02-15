@@ -1,43 +1,60 @@
-# Boston Housing ML Model Evaluation Dashboard
+# 🏡 Boston Housing Price Prediction AI
 
-This project is an interactive R Shiny dashboard for training, evaluating, and comparing three different machine learning models on the Boston housing dataset.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://boston-housing-app-be74qvyztoprzwrfrwcjdv.streamlit.app/)
+This is an interactive web application for predicting Boston housing prices using advanced Machine Learning models. Built with **Python** and **Streamlit**.
 
-## How to Run the Application
+## 🌟 Features
+- **AutoML Leaderboard:** Compare Linear Regression, Random Forest, XGBoost, LightGBM, and CatBoost performance instantly.
+- **Explainable AI (XAI):** Integrated **SHAP** and **LIME** for model transparency. Understand *why* the model made a specific prediction.
+- **What-If Simulator:** Interactive sidebar to adjust house features and see real-time price predictions.
+- **Deep Learning:** Includes a PyTorch Neural Network demo.
 
-1.  **Prerequisites**: Make sure you have R and RStudio installed.
-2.  **Install Packages**: Open your R console and run the following command to install all the necessary packages:
-    ```R
-    install.packages(c("shiny", "shinydashboard", "dplyr", "ggplot2", "caret", "randomForest", "xgboost", "MASS"))
-    ```
-3.  **Launch the App**:
-    *   Set your working directory to the root of this project folder.
-    *   Run the following command in your R console:
-    ```R
-    shiny::runApp()
-    ```
-    The application should launch in a new window or in your web browser.
+## 🚀 How to Run Locally
 
-## Understanding the Evaluation Metrics
+If you want to run this app on your own machine:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/2002brian/boston-housing-app.git
+   cd boston-housing-app
 
 The dashboard displays two key metrics to evaluate model performance on the test set:
 
-### R-squared (R²)
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
 
-*   **What it is**: R-squared, also known as the coefficient of determination, is a statistical measure that represents the proportion of the variance for a dependent variable that's explained by an independent variable or variables in a regression model.
-*   **Interpretation**:
-    *   It is a value between 0 and 1 (or 0% and 100%).
-    *   A value of **1** indicates that the model perfectly predicts the dependent variable's values.
-    *   A value of **0** indicates that the model fails to explain any of the variability of the target variable.
-*   **Goal**: A higher R-squared value is generally better, as it indicates that the model explains a larger portion of the variance in the housing prices.
+3.**Run the app:**
+   ```bash
+   streamlit run app.py
 
-### Root Mean Squared Error (RMSE)
+📊 Understanding the Evaluation Metrics
+The dashboard displays two key metrics to evaluate model performance on the test set:
 
-*   **What it is**: RMSE is the standard deviation of the residuals (prediction errors). Residuals are a measure of how far from the regression line data points are; RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit.
-*   **Interpretation**:
-    *   It is an absolute measure of fit, measured in the same units as the target variable (in this case, thousands of dollars, since `Price` is in $1000s).
-    *   A value of **0** would mean the model's predictions are perfect.
-*   **Goal**: A lower RMSE value is better, as it indicates that the model's predictions are, on average, closer to the actual values.
-# boston-housing-app
-# boston-housing-app
-# boston-housing-app
-# boston-housing-app
+R-squared (R²)
+
+What it is: A statistical measure representing the proportion of variance for a dependent variable explained by the independent variables.
+
+Interpretation:
+
+Value between 0 and 1.
+
+1 means perfect prediction.
+
+0 means the model fails to explain variability.
+
+Goal: Higher is better.
+
+Root Mean Squared Error (RMSE)
+
+What it is: The standard deviation of the residuals (prediction errors). It tells you how concentrated the data is around the line of best fit.
+
+Interpretation:
+
+Measured in the same units as the target variable ($1000s).
+
+0 would mean perfect predictions.
+
+Goal: Lower is better.
+
+Created by Brian Wu
