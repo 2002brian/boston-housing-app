@@ -27,33 +27,34 @@ If you want to run this app on your own machine:
    streamlit run app.py
 
 
-📊 Understanding the Evaluation Metrics
+## 📊 Understanding the Evaluation Metrics
+
 The dashboard displays two key metrics to evaluate model performance on the test set:
 
-R-squared (R²)
+1. R-squared (R²)
 
-What it is: A statistical measure representing the proportion of variance for a dependent variable explained by the independent variables.
+- ** What it is: A statistical measure representing the proportion of variance for a dependent variable explained by the independent variables.
 
-Interpretation:
+- ** Interpretation:
 
-Value between 0 and 1.
+- **** Value is between 0 and 1.
 
-1 means perfect prediction.
+- **** 1 means perfect prediction.
 
-0 means the model fails to explain variability.
+- **** 0 means the model fails to explain any variability.
 
-Goal: Higher is better.
+- ** Goal: Higher is better.
 
-Root Mean Squared Error (RMSE)
+2. Root Mean Squared Error (RMSE)
 
-What it is: The standard deviation of the residuals (prediction errors). It tells you how concentrated the data is around the line of best fit.
+- ** What it is: The standard deviation of the residuals (prediction errors). It tells you how concentrated the data is around the line of best fit.
 
-Interpretation:
+- ** Interpretation:
 
-Measured in the same units as the target variable ($1000s).
+- **** Measured in the same units as the target variable ($1000s).
 
-0 would mean perfect predictions.
+- **** 0 would mean perfect predictions.
 
-Goal: Lower is better.
+- ** Goal: Lower is better.
 
 Created by Brian Wu
