@@ -18,15 +18,14 @@ If you want to run this app on your own machine:
    git clone https://github.com/2002brian/boston-housing-app.git
    cd boston-housing-app
 
-The dashboard displays two key metrics to evaluate model performance on the test set:
-
 2. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
 
-3.**Run the app:**
+3. **Run the app:**
    ```bash
    streamlit run app.py
+
 
 📊 Understanding the Evaluation Metrics
 The dashboard displays two key metrics to evaluate model performance on the test set:
