@@ -9,6 +9,25 @@ This is an interactive web application for predicting Boston housing prices usin
 - **What-If Simulator:** Interactive sidebar to adjust house features and see real-time price predictions.
 - **Deep Learning:** Includes a PyTorch Neural Network demo.
 
+## 🏠 Input Features Explained (Sidebar Variables)
+
+Use the sidebar to adjust these parameters and simulate different housing conditions:
+
+| Feature | Description | Impact on Price (General) |
+| :--- | :--- | :--- |
+| **CRIM** | Per capita crime rate by town. | 📉 Higher crime → Lower price |
+| **ZN** | Proportion of residential land zoned for lots over 25,000 sq.ft. | 📈 More residential zone → Higher price |
+| **INDUS** | Proportion of non-retail business acres per town. | 📉 More industry → Lower price |
+| **CHAS** | Charles River dummy variable (1 if tract bounds river; 0 otherwise). | 📈 River view → Higher price |
+| **NOX** | Nitric oxides concentration (parts per 10 million). | 📉 High pollution → Lower price |
+| **RM** | Average number of rooms per dwelling. | 📈 More rooms → Higher price |
+| **AGE** | Proportion of owner-occupied units built prior to 1940. | 📉 Older buildings → Lower price |
+| **DIS** | Weighted distances to five Boston employment centres. | 📈 Closer to centers is usually better, but DIS measures distance to work. |
+| **RAD** | Index of accessibility to radial highways. | 📈 Better transport access → Higher price |
+| **TAX** | Full-value property-tax rate per $10,000. | 📉 Higher tax → Lower price |
+| **PTRATIO**| Pupil-teacher ratio by town. | 📉 More students per teacher → Lower price |
+| **LSTAT** | % lower status of the population. | 📉 Higher % lower status → Lower price |
+
 ## 🚀 How to Run Locally
 
 If you want to run this app on your own machine:
