@@ -38,3 +38,4 @@ The dashboard displays two key metrics to evaluate model performance on the test
     *   A value of **0** would mean the model's predictions are perfect.
 *   **Goal**: A lower RMSE value is better, as it indicates that the model's predictions are, on average, closer to the actual values.
 # boston-housing-app
+# boston-housing-app
