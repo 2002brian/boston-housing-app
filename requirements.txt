@@ -1,9 +1,9 @@
 streamlit
-pandas
-numpy
+pandas<2.0.0
+numpy<2.0.0
 scikit-learn==1.5.2
-xgboost
-lightgbm
+xgboost==2.0.3
+lightgbm==4.3.0
 catboost
 shap
 lime
