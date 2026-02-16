@@ -1,6 +1,6 @@
 streamlit
-pandas<2.0.0
-numpy<2.2.0
+numpy<2.0.0
+pandas<2.2.0
 scikit-learn==1.5.2
 xgboost==2.0.3
 lightgbm
@@ -9,5 +9,5 @@ shap
 lime
 plotly
 matplotlib
-torch
 statsmodels
+# torch
