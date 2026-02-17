@@ -504,6 +504,15 @@ def main():
             )
             st.plotly_chart(fig, use_container_width=True)
 
+            fig_cv = px.bar(
+              st.session_state.leaderboard,
+              x="Model",
+              y="CV Mean R2",
+              color="CV Mean R2",
+              color_continuous_scale="Magma",
+              title="Leaderboard by CV Mean R² (Cross-Validation Score)",
+          )
+            st.plotly_chart(fig_cv, use_container_width=True)
             best_row = st.session_state.leaderboard.iloc[0]
             c1, c2, c3 = st.columns(3)
             c1.metric("Best Model", best_row["Model"])
