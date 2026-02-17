@@ -193,7 +193,7 @@ def train_and_score_model(
 ):
     model = make_model(model_name, random_state=random_state)
 
-    cv = KFold(n_splits=10, shuffle=True, random_state=random_state)
+    cv = KFold(n_splits=5, shuffle=True, random_state=random_state)
     cv_scores = cross_val_score(
         model,
         X_train,
