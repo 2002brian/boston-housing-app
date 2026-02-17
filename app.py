@@ -453,10 +453,12 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
 
             best_row = st.session_state.leaderboard.iloc[0]
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
+
             c1.metric("Best Model", best_row["Model"])
-            c2.metric("Best R2", f"{best_row['R2']:.4f}")
-            c3.metric("Global Train Ratio", f"{train_ratio:.2f}")
+            c2.metric("Test R²", f"{best_row['R2']:.4f}")
+            c3.metric("CV Mean R²", f"{best_row['CV Mean R2']:.4f}")
+            c4.metric("Train Ratio", f"{train_ratio:.2f}")
         else:
             st.info("Click 'Run All Models' to generate the leaderboard.")
 
