@@ -8,11 +8,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from sklearn.experimental import enable_halving_search_cv  # noqa: F401
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import HalvingRandomSearchCV
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -193,18 +195,68 @@ def train_and_score_model(
 ):
     model = make_model(model_name, random_state=random_state)
 
+    param_distributions = {
+        "Random Forest": {
+            "model__n_estimators": [120, 220, 320],
+            "model__max_depth": [None, 5, 8, 10],
+            "model__min_samples_split": [2, 5, 10],
+            "model__min_samples_leaf": [1, 2, 4],
+            "model__max_features": [0.6, 0.8, 1.0],
+        },
+        "XGBoost": {
+            "model__n_estimators": [150, 250, 350],
+            "model__max_depth": [3, 5, 7, 9],
+            "model__learning_rate": [0.03, 0.05, 0.08],
+            "model__subsample": [0.7, 0.85, 1.0],
+            "model__colsample_bytree": [0.7, 0.85, 1.0],
+        },
+        "LightGBM": {
+            "model__n_estimators": [150, 250, 350],
+            "model__max_depth": [-1, 4, 6, 8, 10],
+            "model__learning_rate": [0.03, 0.05, 0.08],
+            "model__num_leaves": [15, 31, 63],
+            "model__subsample": [0.7, 0.85, 1.0],
+            "model__colsample_bytree": [0.7, 0.85, 1.0],
+        },
+        "CatBoost": {
+            "model__iterations": [200, 350, 500],
+            "model__depth": [4, 6, 8, 10],
+            "model__learning_rate": [0.03, 0.05, 0.08],
+            "model__l2_leaf_reg": [1, 3, 5, 7, 9],
+        },
+    }
+
+    if model_name in param_distributions:
+        tuner = HalvingRandomSearchCV(
+            estimator=model,
+            param_distributions=param_distributions[model_name],
+            factor=3,
+            min_resources="smallest",
+            cv=3,
+            scoring="r2",
+            n_jobs=-1,
+            random_state=random_state,
+            refit=True,
+        )
+        tuner.fit(X_train, y_train)
+        best_model = tuner.best_estimator_
+    else:
+        best_model = model
+        best_model.fit(X_train, y_train)
+
+    X_full = pd.concat([X_train, X_test], axis=0)
+    y_full = pd.concat([y_train, y_test], axis=0)
     cv = KFold(n_splits=5, shuffle=True, random_state=random_state)
     cv_scores = cross_val_score(
-        model,
-        X_train,
-        y_train,
+        best_model,
+        X_full,
+        y_full,
         cv=cv,
         scoring="r2",
-        n_jobs=None,
+        n_jobs=-1,
     )
 
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
+    preds = best_model.predict(X_test)
     result = ModelResult(
         model_name=model_name,
         mae=mean_absolute_error(y_test, preds),
@@ -213,7 +265,7 @@ def train_and_score_model(
         cv_mean_r2=float(np.mean(cv_scores)),
         cv_std_r2=float(np.std(cv_scores)),
     )
-    return model, preds, result
+    return best_model, preds, result
 
 
 def infer_top_driver(model_pipeline: Pipeline, feature_cols: List[str]) -> str:
