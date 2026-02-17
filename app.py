@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -111,6 +111,8 @@ class ModelResult:
     mae: float
     rmse: float
     r2: float
+    cv_mean_r2: float
+    cv_std_r2: float
 
 
 def make_model(model_name: str, random_state: int = 42):
@@ -190,6 +192,17 @@ def train_and_score_model(
     random_state: int = 42,
 ):
     model = make_model(model_name, random_state=random_state)
+
+    cv = KFold(n_splits=10, shuffle=True, random_state=random_state)
+    cv_scores = cross_val_score(
+        model,
+        X_train,
+        y_train,
+        cv=cv,
+        scoring="r2",
+        n_jobs=None,
+    )
+
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
     result = ModelResult(
@@ -197,8 +210,25 @@ def train_and_score_model(
         mae=mean_absolute_error(y_test, preds),
         rmse=np.sqrt(mean_squared_error(y_test, preds)),
         r2=r2_score(y_test, preds),
+        cv_mean_r2=float(np.mean(cv_scores)),
+        cv_std_r2=float(np.std(cv_scores)),
     )
     return model, preds, result
+
+
+def infer_top_driver(model_pipeline: Pipeline, feature_cols: List[str]) -> str:
+    estimator = model_pipeline.named_steps["model"]
+
+    if hasattr(estimator, "coef_"):
+        coefs = np.asarray(estimator.coef_).flatten()
+        if len(coefs) == len(feature_cols):
+            return feature_cols[int(np.argmax(np.abs(coefs)))]
+    if hasattr(estimator, "feature_importances_"):
+        importances = np.asarray(estimator.feature_importances_).flatten()
+        if len(importances) == len(feature_cols):
+            return feature_cols[int(np.argmax(importances))]
+
+    return ""
 
 
 @st.cache_resource
@@ -399,6 +429,8 @@ def main():
                             "MAE": result.mae,
                             "RMSE": result.rmse,
                             "R2": result.r2,
+                            "CV Mean R2": result.cv_mean_r2,
+                            "CV Std Dev": result.cv_std_r2,
                         }
                     )
 
@@ -438,6 +470,15 @@ def main():
                 "Select model", st.session_state.leaderboard["Model"].tolist()
             )
             y_pred = st.session_state.pred_store[model_choice]
+            model_perf = st.session_state.leaderboard[
+                st.session_state.leaderboard["Model"] == model_choice
+            ].iloc[0]
+
+            st.markdown("**Model Performance**")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Test R2", f"{model_perf['R2']:.4f}")
+            m2.metric("CV Mean R2", f"{model_perf['CV Mean R2']:.4f}")
+            m3.metric("CV Std Dev", f"{model_perf['CV Std Dev']:.4f}")
 
             diag_df = pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred})
             diag_df["Residual"] = diag_df["Actual"] - diag_df["Predicted"]
@@ -510,6 +551,53 @@ def main():
                     st.pyplot(fig, clear_figure=True)
                 except Exception as e:
                     st.error(f"SHAP failed for this model in current environment: {e}")
+
+                st.markdown("**SHAP Waterfall (Current What-If Input)**")
+                try:
+                    preprocessor = model_pipe.named_steps["preprocess"]
+                    estimator = model_pipe.named_steps["model"]
+
+                    X_train_trans = preprocessor.transform(X_train)
+                    single_trans = preprocessor.transform(single_instance)
+
+                    if hasattr(estimator, "feature_importances_"):
+                        explainer = shap.TreeExplainer(estimator)
+                        explanation = explainer(single_trans)
+                        single_explanation = shap.Explanation(
+                            values=np.array(explanation.values[0]),
+                            base_values=float(np.array(explanation.base_values).flatten()[0]),
+                            data=np.array(single_trans[0]),
+                            feature_names=feature_cols,
+                        )
+                    elif hasattr(estimator, "coef_"):
+                        explainer = shap.LinearExplainer(estimator, X_train_trans)
+                        explanation = explainer(single_trans)
+                        single_explanation = shap.Explanation(
+                            values=np.array(explanation.values[0]),
+                            base_values=float(np.array(explanation.base_values).flatten()[0]),
+                            data=np.array(single_trans[0]),
+                            feature_names=feature_cols,
+                        )
+                    else:
+                        background = X_train_trans[: min(80, len(X_train_trans))]
+                        explainer = shap.KernelExplainer(estimator.predict, background)
+                        shap_vals = explainer.shap_values(single_trans, nsamples=150)
+                        shap_array = np.array(shap_vals)
+                        if shap_array.ndim > 1:
+                            shap_array = shap_array[0]
+                        base_val = float(np.array(explainer.expected_value).flatten()[0])
+                        single_explanation = shap.Explanation(
+                            values=shap_array,
+                            base_values=base_val,
+                            data=np.array(single_trans[0]),
+                            feature_names=feature_cols,
+                        )
+
+                    fig_wf = plt.figure(figsize=(9, 4.8))
+                    shap.plots.waterfall(single_explanation, show=False)
+                    st.pyplot(fig_wf, clear_figure=True)
+                except Exception as e:
+                    st.error(f"SHAP waterfall failed for this model in current environment: {e}")
 
             st.markdown("**LIME Local Explanation**")
             if LimeTabularExplainer is None:
@@ -621,6 +709,38 @@ def main():
                     )
                 )
                 st.plotly_chart(indicator, use_container_width=True)
+
+                with st.expander("💰 Business & Market Analysis", expanded=True):
+                    train_mean_price = float(y_train.mean())
+                    if pred_value > train_mean_price:
+                        st.success(
+                            "📈 Premium Listing: This property is valued above the market average."
+                        )
+                    elif pred_value < train_mean_price:
+                        st.info(
+                            "📉 Value Deal: This property is valued below the market average."
+                        )
+                    else:
+                        st.info("This property is valued at the market average.")
+
+                    st.caption(
+                        f"Training market average (MEDV, $1000s): {train_mean_price:.2f}"
+                    )
+
+                    if pred_model != "Neural Network":
+                        top_driver = infer_top_driver(
+                            st.session_state.trained_models[pred_model], feature_cols
+                        )
+                        if top_driver:
+                            st.write(
+                                f"The biggest factor affecting this price is **{top_driver}**."
+                            )
+                        else:
+                            st.write("The biggest factor affecting this price is not available.")
+                    else:
+                        st.write(
+                            "The biggest factor affecting this price is not available for the neural network model."
+                        )
 
 
 if __name__ == "__main__":
