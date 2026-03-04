@@ -58,9 +58,9 @@ The dashboard displays two key metrics to evaluate model performance on the test
 
 -   Value is between 0 and 1.
 
--   1 means perfect prediction.
+ -  1 means perfect prediction.
 
--   0 means the model fails to explain any variability.
+ -  0 means the model fails to explain any variability.
 
 - Goal: Higher is better.
 
@@ -70,9 +70,9 @@ The dashboard displays two key metrics to evaluate model performance on the test
 
 -  Interpretation:
 
--   Measured in the same units as the target variable ($1000s).
+ -  Measured in the same units as the target variable ($1000s).
 
--   0 would mean perfect predictions.
+ -  0 would mean perfect predictions.
 
 - Goal: Lower is better.
 

@@ -54,27 +54,27 @@ except Exception:
     nn = None
 
 
-st.set_page_config(page_title="Boston Housing Price Predictor", layout="wide")
-
-st.markdown(
-    """
-    <style>
-        .stMetric {
-            border: 1px solid #E4E8EE;
-            border-radius: 12px;
-            padding: 8px;
-            background: #F9FBFF;
-        }
-        .block-container {
-            padding-top: 1.2rem;
-        }
-        h1, h2, h3 {
-            letter-spacing: 0.2px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+def configure_page() -> None:
+    st.set_page_config(page_title="Boston Housing Price Predictor", layout="wide")
+    st.markdown(
+        """
+        <style>
+            .stMetric {
+                border: 1px solid #E4E8EE;
+                border-radius: 12px;
+                padding: 8px;
+                background: #F9FBFF;
+            }
+            .block-container {
+                padding-top: 1.2rem;
+            }
+            h1, h2, h3 {
+                letter-spacing: 0.2px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_data
@@ -117,12 +117,40 @@ class ModelResult:
     cv_std_r2: float
 
 
-def make_model(model_name: str, random_state: int = 42):
+def safe_r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    y_true_arr = np.asarray(y_true, dtype=float).reshape(-1)
+    y_pred_arr = np.asarray(y_pred, dtype=float).reshape(-1)
+    valid = np.isfinite(y_true_arr) & np.isfinite(y_pred_arr)
+
+    if valid.sum() < 2:
+        return np.nan
+
+    y_true_valid = y_true_arr[valid]
+    y_pred_valid = y_pred_arr[valid]
+
+    if np.isclose(np.var(y_true_valid), 0.0):
+        return np.nan
+
+    try:
+        score = float(r2_score(y_true_valid, y_pred_valid))
+    except ValueError:
+        return np.nan
+
+    return score if np.isfinite(score) else np.nan
+
+
+def format_metric(value: float, digits: int = 4) -> str:
+    if value is None or not np.isfinite(value):
+        return "N/A"
+    return f"{value:.{digits}f}"
+
+
+def make_model(model_name: str, random_state: int = 42, n_jobs: int = -1):
     if model_name == "Linear Regression":
         estimator = LinearRegression()
     elif model_name == "Random Forest":
         estimator = RandomForestRegressor(
-            n_estimators=400, random_state=random_state, n_jobs=-1
+            n_estimators=400, random_state=random_state, n_jobs=n_jobs
         )
     elif model_name == "XGBoost":
         if XGBRegressor is None:
@@ -192,8 +220,9 @@ def train_and_score_model(
     y_train: pd.Series,
     y_test: pd.Series,
     random_state: int = 42,
+    n_jobs: int = -1,
 ):
-    model = make_model(model_name, random_state=random_state)
+    model = make_model(model_name, random_state=random_state, n_jobs=n_jobs)
 
     param_distributions = {
         "Random Forest": {
@@ -234,7 +263,7 @@ def train_and_score_model(
             min_resources="smallest",
             cv=3,
             scoring="r2",
-            n_jobs=-1,
+            n_jobs=n_jobs,
             random_state=random_state,
             refit=True,
         )
@@ -253,7 +282,7 @@ def train_and_score_model(
         y_full,
         cv=cv,
         scoring="r2",
-        n_jobs=-1,
+        n_jobs=n_jobs,
     )
 
     preds = best_model.predict(X_test)
@@ -261,7 +290,7 @@ def train_and_score_model(
         model_name=model_name,
         mae=mean_absolute_error(y_test, preds),
         rmse=np.sqrt(mean_squared_error(y_test, preds)),
-        r2=r2_score(y_test, preds),
+        r2=safe_r2(y_test, preds),
         cv_mean_r2=float(np.mean(cv_scores)),
         cv_std_r2=float(np.std(cv_scores)),
     )
@@ -417,6 +446,7 @@ def show_missing_library_notices():
 
 
 def main():
+    configure_page()
     st.title("Boston Housing Price Prediction")
     st.caption(
         "Interactive ML workbench with AutoML leaderboard, explainability, and what-if simulation"
@@ -486,13 +516,15 @@ def main():
                         }
                     )
 
-            leaderboard_df = pd.DataFrame(leaderboard_rows).sort_values(by="R2", ascending=False)
+            leaderboard_df = pd.DataFrame(leaderboard_rows).sort_values(
+                by="R2", ascending=False, na_position="last"
+            )
             st.session_state.trained_models = trained_models
             st.session_state.leaderboard = leaderboard_df
             st.session_state.pred_store = pred_store
 
         if not st.session_state.leaderboard.empty:
-            st.dataframe(st.session_state.leaderboard, use_container_width=True)
+            st.dataframe(st.session_state.leaderboard, width="stretch")
 
             fig = px.bar(
                 st.session_state.leaderboard,
@@ -502,7 +534,7 @@ def main():
                 color_continuous_scale="Tealgrn",
                 title="Leaderboard by R2",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig)
 
             fig_cv = px.bar(
               st.session_state.leaderboard,
@@ -512,12 +544,14 @@ def main():
               color_continuous_scale="Magma",
               title="Leaderboard by CV Mean R² (Cross-Validation Score)",
           )
-            st.plotly_chart(fig_cv, use_container_width=True)
+            st.plotly_chart(fig_cv)
             best_row = st.session_state.leaderboard.iloc[0]
             c1, c2, c3 = st.columns(3)
             c1.metric("Best Model", best_row["Model"])
-            c2.metric("Best R2", f"{best_row['R2']:.4f}")
+            c2.metric("Best R2", format_metric(best_row["R2"], 4))
             c3.metric("Global Train Ratio", f"{train_ratio:.2f}")
+            if not np.isfinite(best_row["R2"]):
+                st.warning("Best model R2 is undefined in current split (e.g., low variance in target).")
         else:
             st.info("Click 'Run All Models' to generate the leaderboard.")
 
@@ -537,9 +571,9 @@ def main():
 
             st.markdown("**Model Performance**")
             m1, m2, m3 = st.columns(3)
-            m1.metric("Test R2", f"{model_perf['R2']:.4f}")
-            m2.metric("CV Mean R2", f"{model_perf['CV Mean R2']:.4f}")
-            m3.metric("CV Std Dev", f"{model_perf['CV Std Dev']:.4f}")
+            m1.metric("Test R2", format_metric(model_perf["R2"], 4))
+            m2.metric("CV Mean R2", format_metric(model_perf["CV Mean R2"], 4))
+            m3.metric("CV Std Dev", format_metric(model_perf["CV Std Dev"], 4))
 
             diag_df = pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred})
             diag_df["Residual"] = diag_df["Actual"] - diag_df["Predicted"]
@@ -551,10 +585,10 @@ def main():
                 trendline="ols",
                 title="Actual vs Predicted",
             )
-            st.plotly_chart(f1, use_container_width=True)
+            st.plotly_chart(f1)
 
             f2 = px.histogram(diag_df, x="Residual", nbins=30, title="Residual Distribution")
-            st.plotly_chart(f2, use_container_width=True)
+            st.plotly_chart(f2)
 
             fi_df = extract_feature_importance(
                 st.session_state.trained_models[model_choice], feature_cols
@@ -567,7 +601,7 @@ def main():
                 title="Feature Importance (Model-Specific)",
             )
             f3.update_layout(yaxis={"categoryorder": "total ascending"})
-            st.plotly_chart(f3, use_container_width=True)
+            st.plotly_chart(f3)
 
     with tab3:
         st.subheader("Model Explainability (SHAP + LIME)")
@@ -686,7 +720,7 @@ def main():
                         num_features=min(8, len(feature_cols)),
                     )
                     lime_df = pd.DataFrame(explanation.as_list(), columns=["Feature", "Weight"])
-                    st.dataframe(lime_df, use_container_width=True)
+                    st.dataframe(lime_df, width="stretch")
                 except Exception as e:
                     st.error(f"LIME failed for this model in current environment: {e}")
 
@@ -718,7 +752,7 @@ def main():
                         st.session_state.nn_metrics = {
                             "MAE": mean_absolute_error(y_test, nn_preds),
                             "RMSE": np.sqrt(mean_squared_error(y_test, nn_preds)),
-                            "R2": r2_score(y_test, nn_preds),
+                            "R2": safe_r2(y_test, nn_preds),
                         }
 
                 if "nn_metrics" in st.session_state:
@@ -726,7 +760,7 @@ def main():
                     c1, c2, c3 = st.columns(3)
                     c1.metric("NN MAE", f"{m['MAE']:.3f}")
                     c2.metric("NN RMSE", f"{m['RMSE']:.3f}")
-                    c3.metric("NN R2", f"{m['R2']:.3f}")
+                    c3.metric("NN R2", format_metric(m["R2"], 3))
 
         with col_right:
             st.markdown("**Single-Instance Price Prediction**")
@@ -769,7 +803,7 @@ def main():
                         },
                     )
                 )
-                st.plotly_chart(indicator, use_container_width=True)
+                st.plotly_chart(indicator)
 
                 with st.expander("💰 Business & Market Analysis", expanded=True):
                     train_mean_price = float(y_train.mean())
@@ -804,5 +838,48 @@ def main():
                         )
 
 
+def run_self_test() -> None:
+    print("[Self-Test] Start")
+    print(f"[Self-Test] Streamlit version: {st.__version__}")
+
+    df_raw = load_data()
+    assert not df_raw.empty, "Loaded dataset is empty"
+
+    df, feature_cols, target_col = preprocess_data(df_raw.copy())
+    assert target_col in df.columns, f"Missing target column: {target_col}"
+    assert df[target_col].notna().all(), "Target column contains NA values"
+
+    X_train, X_test, y_train, y_test = split_dataset(
+        df, feature_cols, target_col, test_size=0.2, random_state=42
+    )
+    assert len(X_train) > 0 and len(X_test) > 0, "Train/test split failed"
+
+    model, preds, result = train_and_score_model(
+        "Linear Regression",
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        random_state=42,
+        n_jobs=1,
+    )
+    assert model is not None, "Model training returned None"
+    assert len(preds) == len(y_test), "Prediction length mismatch"
+    assert np.isfinite(result.mae), "MAE is invalid"
+    assert np.isfinite(result.rmse), "RMSE is invalid"
+
+    if np.isnan(result.r2):
+        print("[Self-Test] Warning: R2 undefined for this split (handled as NaN).")
+    else:
+        assert np.isfinite(result.r2), "R2 is invalid"
+
+    print("[Self-Test] PASS")
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--self-test" in sys.argv:
+        run_self_test()
+    else:
+        main()

@@ -1,0 +1,15 @@
+# Python 快取
+__pycache__/
+*.py[cod]
+
+# macOS 系統檔
+.DS_Store
+
+# 機器學習與訓練暫存
+catboost_info/
+lightning_logs/
+
+# 虛擬環境與子資料夾
+venv/
+.venv/
+boston-housing-app/
