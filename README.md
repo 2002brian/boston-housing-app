@@ -1,6 +1,6 @@
 # 🏡 Boston Housing Price Prediction AI
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://boston-housing-app-be74qvyztoprzwrfrwcjdv.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://boston-housing-app-a6rlan5jmppubayzmuukts.streamlit.app/)
 This is an interactive web application for predicting Boston housing prices using advanced Machine Learning models. Built with **Python** and **Streamlit**.
 
 ## 🌟 Features
